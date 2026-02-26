@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,15 +8,20 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;1,700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;1,700&display=swap"
+        rel="stylesheet">
 </head>
+
 <body>
     <div id="game-container">
         <!-- HUD Overlay -->
         <div id="hud">
             <div class="hud-item" id="health-container">
                 <span class="icon">❤️</span>
-                <div class="bar-bg"><div id="health-bar" class="bar-fill"></div></div>
+                <div class="bar-bg">
+                    <div id="health-bar" class="bar-fill"></div>
+                </div>
             </div>
             <div class="hud-item" id="hairball-container">
                 <span class="icon">💨</span>
@@ -32,7 +38,7 @@
                 <p class="subtitle">O amor desafia a máfia felina.</p>
                 <button id="start-btn" class="btn primary-btn pulse">INICIAR JORNADA</button>
                 <div class="controls-hint">
-                    <p>W, A, S, D: Mover | Espaço: Pular | E: Atacar (Bolas de Pelo)</p>
+                    <p>WASD / Setas: Mover | Espaço / W: Pular | E: Atacar</p>
                 </div>
             </div>
 
@@ -51,4 +57,5 @@
     </div>
     <script src="game.js"></script>
 </body>
+
 </html>

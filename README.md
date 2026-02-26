@@ -13,8 +13,8 @@ O objetivo é atravessar os cenários desviando de obstáculos e derrotando os c
 ### Comandos
 | Tecla | Ação |
 | :--- | :--- |
-| **W, A, S, D** | Movimentação do personagem |
-| **Espaço** | Pular obstáculos |
+| **W, A, S, D / Setas** | Movimentação do personagem |
+| **Espaço / W / Seta Cima** | Pular obstáculos |
 | **E** | Atacar (Lança Bolas de Pelo) |
 
 ## 🛠️ Tecnologias Utilizadas

@@ -152,12 +152,13 @@ class Player {
         ctx.save();
         ctx.translate(-cameraX, 0);
 
-        if (this.facing === -1) {
-            // Flip logic: Translate to the character's position + width, then scale to flip
+        if (this.facing === 1) {
+            // Inverter se estiver indo para a direita (pois o sprite original olha para a esquerda)
             ctx.translate(this.x + this.width, this.y);
             ctx.scale(-1, 1);
             ctx.drawImage(assets.hero, 0, 0, this.width, this.height);
         } else {
+            // Direção normal (mantém o sprite original olhando para a esquerda)
             ctx.drawImage(assets.hero, this.x, this.y, this.width, this.height);
         }
         ctx.restore();
