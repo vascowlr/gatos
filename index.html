@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stray Love: O Fugitivo</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <!-- HUD Overlay -->
+        <div id="hud">
+            <div class="hud-item" id="health-container">
+                <span class="icon">❤️</span>
+                <div class="bar-bg"><div id="health-bar" class="bar-fill"></div></div>
+            </div>
+            <div class="hud-item" id="hairball-container">
+                <span class="icon">💨</span>
+                <span id="hairball-count">0</span>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- UI Overlays -->
+        <div id="ui-overlay" class="overlay">
+            <div id="start-screen" class="menu-screen active">
+                <h1 class="game-title">Stray Love: <span>O Fugitivo</span></h1>
+                <p class="subtitle">O amor desafia a máfia felina.</p>
+                <button id="start-btn" class="btn primary-btn pulse">INICIAR JORNADA</button>
+                <div class="controls-hint">
+                    <p>W, A, S, D: Mover | Espaço: Pular | E: Atacar (Bolas de Pelo)</p>
+                </div>
+            </div>
+
+            <div id="game-over-screen" class="menu-screen">
+                <h2 class="menu-title">DERROTADO!</h2>
+                <p>A máfia o pegou desta vez.</p>
+                <button id="restart-btn" class="btn secondary-btn">TENTAR NOVAMENTE</button>
+            </div>
+
+            <div id="victory-screen" class="menu-screen">
+                <h2 class="menu-title">VITÓRIA!</h2>
+                <p>Você escapou da máfia e correu para sua amada.</p>
+                <button id="replay-btn" class="btn primary-btn">JOGAR DE NOVO</button>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
