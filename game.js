@@ -233,12 +233,19 @@ let projectiles = [];
 
 function init() {
     resize();
+    hideScreens();
     player.reset();
     createEnemies();
     projectiles = [];
     cameraX = 0;
     gameState = 'PLAYING';
     gameLoop();
+}
+
+function hideScreens() {
+    startScreen.classList.remove('active');
+    gameOverScreen.classList.remove('active');
+    victoryScreen.classList.remove('active');
 }
 
 function createEnemies() {
@@ -278,11 +285,13 @@ function updateHUD() {
 
 function gameOver() {
     gameState = 'GAMEOVER';
+    hideScreens();
     gameOverScreen.classList.add('active');
 }
 
 function showVictory() {
     gameState = 'VICTORY';
+    hideScreens();
     victoryScreen.classList.add('active');
 }
 

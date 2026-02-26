@@ -1,6 +1,8 @@
 :root {
-    --primary-color: #ff0055; /* Neon Pink/Red */
-    --secondary-color: #00ffff; /* Neon Cyan */
+    --primary-color: #ff0055;
+    /* Neon Pink/Red */
+    --secondary-color: #00ffff;
+    /* Neon Cyan */
     --background-dark: rgba(10, 10, 15, 0.95);
     --text-light: #ffffff;
     --accent-glow: 0 0 15px rgba(255, 0, 85, 0.8), 0 0 30px rgba(255, 0, 85, 0.4);
@@ -109,7 +111,17 @@ canvas {
     justify-content: center;
     align-items: center;
     z-index: 100;
+    pointer-events: none;
+    /* Let clicks pass through to the game by default */
+    background: rgba(0, 0, 0, 0);
     transition: background 0.5s ease;
+}
+
+/* Enable overlay only when a menu screen is active */
+.overlay:has(.menu-screen.active) {
+    pointer-events: all;
+    background: rgba(0, 0, 0, 0.5);
+    /* Dim the game background when menu is open */
 }
 
 .menu-screen {
@@ -141,12 +153,14 @@ canvas {
     margin-bottom: 8px;
     letter-spacing: -1px;
     background: linear-gradient(135deg, #fff, #bbb);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 .game-title span {
     background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    background-clip: text;
     -webkit-background-clip: text;
 }
 
@@ -203,9 +217,20 @@ canvas {
 
 /* Animations */
 @keyframes pulse {
-    0% { transform: scale(1); box-shadow: 0 0 15px rgba(255, 0, 85, 0.6); }
-    50% { transform: scale(1.03); box-shadow: 0 0 30px rgba(255, 0, 85, 0.9); }
-    100% { transform: scale(1); box-shadow: 0 0 15px rgba(255, 0, 85, 0.6); }
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 15px rgba(255, 0, 85, 0.6);
+    }
+
+    50% {
+        transform: scale(1.03);
+        box-shadow: 0 0 30px rgba(255, 0, 85, 0.9);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 15px rgba(255, 0, 85, 0.6);
+    }
 }
 
 .pulse {
