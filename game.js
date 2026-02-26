@@ -51,18 +51,24 @@ const keys = {
 
 window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
-    if (key === ' ' || key === 'w') keys.space = true;
-    else if (keys.hasOwnProperty(key)) keys[key] = true;
+    if (key === ' ' || key === 'w' || key === 'arrowup') keys.space = true;
+    else if (key === 'a' || key === 'arrowleft') keys.a = true;
+    else if (key === 'd' || key === 'arrowright') keys.d = true;
+    else if (key === 's' || key === 'arrowdown') keys.s = true;
+    else if (key === 'e') keys.e = true;
 
-    if (key === 'e' && gameState === 'PLAYING') {
+    if ((key === 'e') && gameState === 'PLAYING') {
         player.attack();
     }
 });
 
 window.addEventListener('keyup', (e) => {
     const key = e.key.toLowerCase();
-    if (key === ' ' || key === 'w') keys.space = false;
-    else if (keys.hasOwnProperty(key)) keys[key] = false;
+    if (key === ' ' || key === 'w' || key === 'arrowup') keys.space = false;
+    else if (key === 'a' || key === 'arrowleft') keys.a = false;
+    else if (key === 'd' || key === 'arrowright') keys.d = false;
+    else if (key === 's' || key === 'arrowdown') keys.s = false;
+    else if (key === 'e') keys.e = false;
 });
 
 // Classes
@@ -145,7 +151,9 @@ class Player {
     render() {
         ctx.save();
         ctx.translate(-cameraX, 0);
+
         if (this.facing === -1) {
+            // Flip logic: Translate to the character's position + width, then scale to flip
             ctx.translate(this.x + this.width, this.y);
             ctx.scale(-1, 1);
             ctx.drawImage(assets.hero, 0, 0, this.width, this.height);
