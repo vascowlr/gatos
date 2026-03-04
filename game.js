@@ -13,7 +13,9 @@ const JUMP_FORCE = -14;
 const ENEMY_SPEED = 2.5;
 const HAIRBALL_SPEED = 12;
 const MAX_HEALTH = 100;
-const LEVEL_WIDTH = 5000; // Large level for exploration
+const LEVEL_WIDTH = 3500; // Será definido dinamicamente por fase
+let currentLevel = 1;
+const MAX_LEVELS = 3;
 
 // Game State
 let gameState = 'START';
@@ -32,6 +34,8 @@ const assets = {
 assets.hero.src = 'assets/hero_cat.png';
 assets.enemy.src = 'assets/mafia_cat.png';
 assets.background.src = 'assets/background.png';
+assets.boss = new Image();
+assets.boss.src = 'assets/mafia_cat.png'; // No boss icon yet, using mafia for now
 
 // UI Elements
 const startScreen = document.getElementById('start-screen');
@@ -116,8 +120,25 @@ class Player {
         this.vy += GRAVITY;
         this.y += this.vy;
 
-        // Ground Collision
+        // Platform & Ground Collision
         const groundY = canvas.height * GROUND_Y_RATIO - this.height;
+        this.onGround = false;
+
+        // Check Platforms first (landing from top)
+        for (let p of platforms) {
+            if (this.vy >= 0 &&
+                this.x + this.width * 0.3 < p.x + p.w &&
+                this.x + this.width * 0.7 > p.x &&
+                this.y + this.height >= p.y &&
+                this.y + this.height <= p.y + p.h + this.vy) {
+                this.y = p.y - this.height;
+                this.vy = 0;
+                this.onGround = true;
+                break;
+            }
+        }
+
+        // Ground Collision
         if (this.y > groundY) {
             this.y = groundY;
             this.vy = 0;
@@ -126,16 +147,18 @@ class Player {
 
         // Boundaries
         if (this.x < 0) this.x = 0;
-        if (this.x > LEVEL_WIDTH - this.width) {
-            this.x = LEVEL_WIDTH - this.width;
-            showVictory();
+        if (this.x > levelConfig.width - this.width) {
+            this.x = levelConfig.width - this.width;
+            if (enemies.length === 0 && (!boss || boss.isDead)) {
+                nextLevel();
+            }
         }
 
         // Camera Follow
         const targetCamX = this.x - canvas.width / 3;
         cameraX += (targetCamX - cameraX) * 0.1; // Smooth camera
         if (cameraX < 0) cameraX = 0;
-        if (cameraX > LEVEL_WIDTH - canvas.width) cameraX = LEVEL_WIDTH - canvas.width;
+        if (cameraX > levelConfig.width - canvas.width) cameraX = levelConfig.width - canvas.width;
     }
 
     attack() {
@@ -152,13 +175,15 @@ class Player {
         ctx.save();
         ctx.translate(-cameraX, 0);
 
+        // Glow to hide "fake png" edges
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = 'rgba(0, 255, 255, 0.5)';
+
         if (this.facing === 1) {
-            // Inverter se estiver indo para a direita (pois o sprite original olha para a esquerda)
             ctx.translate(this.x + this.width, this.y);
             ctx.scale(-1, 1);
             ctx.drawImage(assets.hero, 0, 0, this.width, this.height);
         } else {
-            // Direção normal (mantém o sprite original olhando para a esquerda)
             ctx.drawImage(assets.hero, this.x, this.y, this.width, this.height);
         }
         ctx.restore();
@@ -179,18 +204,34 @@ class Enemy {
 
     update() {
         this.x += this.vx;
-        this.y = canvas.height * GROUND_Y_RATIO - this.height;
+
+        // Grounded Y
+        const groundY = canvas.height * GROUND_Y_RATIO - this.height;
+        this.y = groundY;
 
         // Patrol logic
-        if (this.x < this.spawnX - 400) this.vx = Math.abs(this.vx);
-        if (this.x > this.spawnX + 400) this.vx = -Math.abs(this.vx);
+        if (this.x < this.spawnX - 300) {
+            this.vx = Math.abs(this.vx);
+            this.x = this.spawnX - 300;
+        }
+        if (this.x > this.spawnX + 300) {
+            this.vx = -Math.abs(this.vx);
+            this.x = this.spawnX + 300;
+        }
 
-        if (this.x < 0) this.vx = Math.abs(this.vx);
-        if (this.x > LEVEL_WIDTH - this.width) this.vx = -Math.abs(this.vx);
+        // Stay within level boundaries and handle walls better
+        if (this.x < 0) {
+            this.x = 0;
+            this.vx = Math.abs(this.vx);
+        }
+        if (this.x > levelConfig.width - this.width) {
+            this.x = levelConfig.width - this.width;
+            this.vx = -Math.abs(this.vx);
+        }
 
         // Player collision
         if (checkCollision(this, player)) {
-            takeDamage(0.3);
+            takeDamage(0.5);
         }
     }
 
@@ -229,26 +270,185 @@ class Projectile {
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
         ctx.fillStyle = '#fff';
         ctx.shadowBlur = 15;
-        ctx.shadowColor = '#0ff';
+        ctx.shadowColor = '#fff';
         ctx.fill();
         ctx.restore();
     }
 }
 
+class Platform {
+    constructor(x, y, w, h) {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+    }
+
+    render() {
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+
+        // Stylish platform
+        const grad = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.h);
+        grad.addColorStop(0, '#333');
+        grad.addColorStop(1, '#000');
+        ctx.fillStyle = grad;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+
+        // Neon edge
+        ctx.strokeStyle = 'var(--secondary-color)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+
+        ctx.restore();
+    }
+}
+
+class Boss {
+    constructor() {
+        this.width = 250;
+        this.height = 250;
+        this.x = 2800;
+        this.y = canvas.height * GROUND_Y_RATIO - this.height;
+        this.health = 20;
+        this.maxHealth = 20;
+        this.vx = -4;
+        this.state = 'PATROL';
+        this.lastAttack = 0;
+        this.isDead = false;
+    }
+
+    update() {
+        if (this.isDead) return;
+
+        this.x += this.vx;
+
+        // Boss AI
+        if (this.x < 2000) this.vx = 4;
+        if (this.x > levelConfig.width - this.width) this.vx = -4;
+
+        // Boss Attack (fires mafia cats or something?)
+        const now = Date.now();
+        if (now - this.lastAttack > 2000) {
+            // Spawn an enemy
+            enemies.push(new Enemy(this.x));
+            this.lastAttack = now;
+        }
+
+        if (checkCollision(this, player)) {
+            takeDamage(2);
+        }
+    }
+
+    render() {
+        if (this.isDead) return;
+        ctx.save();
+        ctx.translate(-cameraX, 0);
+
+        // Red glow for boss
+        ctx.shadowBlur = 40;
+        ctx.shadowColor = 'red';
+
+        if (this.vx > 0) {
+            ctx.translate(this.x + this.width, this.y);
+            ctx.scale(-1, 1);
+            ctx.drawImage(assets.enemy, 0, 0, this.width, this.height);
+        } else {
+            ctx.drawImage(assets.enemy, this.x, this.y, this.width, this.height);
+        }
+
+        // Boss Health Bar
+        const barW = 200;
+        ctx.fillStyle = '#444';
+        ctx.fillRect(this.x + (this.width - barW) / 2, this.y - 40, barW, 10);
+        ctx.fillStyle = 'red';
+        ctx.fillRect(this.x + (this.width - barW) / 2, this.y - 40, barW * (this.health / this.maxHealth), 10);
+
+        ctx.restore();
+    }
+}
+
+// Level Configs
+const levelConfigs = [
+    {
+        width: 3000,
+        enemyCount: 6,
+        platforms: [
+            new Platform(800, 450, 200, 20),
+            new Platform(1200, 350, 250, 20),
+            new Platform(1600, 450, 200, 20),
+            new Platform(2200, 300, 300, 20)
+        ],
+        hasBoss: false
+    },
+    {
+        width: 4000,
+        enemyCount: 10,
+        platforms: [
+            new Platform(600, 500, 150, 20),
+            new Platform(900, 400, 150, 20),
+            new Platform(1200, 300, 150, 20),
+            new Platform(1600, 450, 200, 20),
+            new Platform(2000, 350, 200, 20),
+            new Platform(2400, 250, 200, 20),
+            new Platform(2800, 400, 200, 20)
+        ],
+        hasBoss: false
+    },
+    {
+        width: 3500,
+        enemyCount: 4,
+        platforms: [
+            new Platform(500, 450, 300, 20),
+            new Platform(1000, 350, 300, 20),
+            new Platform(1500, 450, 300, 20),
+            new Platform(2000, 300, 400, 20)
+        ],
+        hasBoss: true
+    }
+];
+
 // Collections
 let player = new Player();
 let enemies = [];
 let projectiles = [];
+let platforms = [];
+let boss = null;
+let levelConfig = levelConfigs[0];
 
 function init() {
+    currentLevel = 1;
+    startLevel(1);
+}
+
+function startLevel(lvl) {
     resize();
     hideScreens();
+    currentLevel = lvl;
+    levelConfig = levelConfigs[lvl - 1];
+
     player.reset();
     createEnemies();
+    platforms = levelConfig.platforms;
     projectiles = [];
     cameraX = 0;
+
+    if (levelConfig.hasBoss) {
+        boss = new Boss();
+    } else {
+        boss = null;
+    }
+
     gameState = 'PLAYING';
-    gameLoop();
+    if (!animationId) gameLoop();
+}
+
+function nextLevel() {
+    if (currentLevel < MAX_LEVELS) {
+        startLevel(currentLevel + 1);
+    } else {
+        showVictory();
+    }
 }
 
 function hideScreens() {
@@ -259,8 +459,9 @@ function hideScreens() {
 
 function createEnemies() {
     enemies = [];
-    for (let i = 0; i < 12; i++) {
-        enemies.push(new Enemy(800 + i * 500 + Math.random() * 200));
+    const count = levelConfig.enemyCount;
+    for (let i = 0; i < count; i++) {
+        enemies.push(new Enemy(800 + i * (levelConfig.width / (count + 1)) + Math.random() * 200));
     }
 }
 
@@ -290,6 +491,10 @@ function takeDamage(amt) {
 function updateHUD() {
     healthBar.style.width = `${health}%`;
     hairballCount.innerText = hairballs;
+    const levelDisplay = document.getElementById('level-display');
+    if (levelDisplay) {
+        levelDisplay.innerText = `Level ${currentLevel}${levelConfig.hasBoss ? ' (BOSS)' : ''}`;
+    }
 }
 
 function gameOver() {
@@ -315,15 +520,26 @@ function gameLoop() {
         ctx.drawImage(assets.background, i * bgWidth - cameraX * 0.5, 0, bgWidth, canvas.height);
     }
 
+    // Platforms
+    for (let p of platforms) {
+        p.render();
+    }
+
     // Entities
     player.update();
     player.render();
+
+    if (boss) {
+        boss.update();
+        boss.render();
+    }
 
     for (let i = projectiles.length - 1; i >= 0; i--) {
         const p = projectiles[i];
         p.update();
         p.render();
 
+        // Check enemies
         for (let j = enemies.length - 1; j >= 0; j--) {
             const e = enemies[j];
             if (p.x > e.x && p.x < e.x + e.width && p.y > e.y && p.y < e.y + e.height) {
@@ -331,13 +547,29 @@ function gameLoop() {
                 projectiles.splice(i, 1);
                 if (e.health <= 0) {
                     enemies.splice(j, 1);
-                    hairballs += 2; // Reward for kill
+                    hairballs += 2;
                     updateHUD();
                 }
                 break;
             }
         }
-        if (p.x < cameraX - 100 || p.x > cameraX + canvas.width + 100) projectiles.splice(i, 1);
+
+        // Check boss
+        if (boss && !boss.isDead && projectiles[i]) {
+            if (p.x > boss.x && p.x < boss.x + boss.width && p.y > boss.y && p.y < boss.y + boss.height) {
+                boss.health--;
+                projectiles.splice(i, 1);
+                if (boss.health <= 0) {
+                    boss.isDead = true;
+                    hairballs += 10;
+                    updateHUD();
+                }
+            }
+        }
+
+        if (p.x < cameraX - 100 || p.x > cameraX + canvas.width + 100) {
+            if (projectiles[i]) projectiles.splice(i, 1);
+        }
     }
 
     for (let e of enemies) {
