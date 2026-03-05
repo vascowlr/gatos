@@ -13,7 +13,7 @@ const JUMP_FORCE = -14;
 const ENEMY_SPEED = 2.5;
 const HAIRBALL_SPEED = 12;
 const MAX_HEALTH = 100;
-const LEVEL_WIDTH = 3500; // Será definido dinamicamente por fase
+
 let currentLevel = 1;
 const MAX_LEVELS = 25;
 
@@ -373,9 +373,10 @@ class Projectile {
         let baseDamage = isHeavy ? 4 : 1;
         this.damage = baseDamage + (playerDamageBonus * (isHeavy ? 2 : 1));
 
-        // Velocidade baseada no poder do jogador
+        // Velocidade baseada no poder do jogador (Aumentada signficativamente pós-bosses)
         let baseSpeed = isHeavy ? HAIRBALL_SPEED * 1.3 : HAIRBALL_SPEED;
-        this.vx = dir * baseSpeed * (1 + playerDamageBonus * 0.1);
+        let speedBonus = playerDamageBonus * 3.5; // +3.5 velocidade extra por boss!
+        this.vx = dir * (baseSpeed + speedBonus);
 
         this.hitEntities = new Set();
     }
@@ -633,7 +634,7 @@ function updateHUD() {
     hairballCount.innerText = '∞';
     const levelDisplay = document.getElementById('level-display');
     if (levelDisplay) {
-        levelDisplay.innerText = `Level ${currentLevel}${levelConfig.hasBoss ? ' (BOSS)' : ''}`;
+        levelDisplay.innerText = `Level ${currentLevel}${(levelConfig && levelConfig.hasBoss) ? ' (BOSS)' : ''}`;
     }
 }
 
@@ -661,7 +662,8 @@ function gameLoop() {
 
     // Parallax Background
     const bgWidth = canvas.height * (assets.background.width / assets.background.height || 1.77);
-    for (let i = 0; i < Math.ceil(LEVEL_WIDTH / bgWidth) + 1; i++) {
+    const requiredBgWidth = levelConfig.width + (levelConfig.width * 0.5); // Garante renderização da câmera + parallax
+    for (let i = 0; i < Math.ceil(requiredBgWidth / bgWidth) + 1; i++) {
         ctx.drawImage(assets.background, i * bgWidth - cameraX * 0.5, 0, bgWidth, canvas.height);
     }
 
