@@ -117,8 +117,8 @@ canvas {
     transition: background 0.5s ease;
 }
 
-/* Enable overlay only when a menu screen is active */
-.overlay:has(.menu-screen.active) {
+/* Enable overlay only when active */
+.overlay.active {
     pointer-events: all;
     background: rgba(0, 0, 0, 0.5);
     /* Dim the game background when menu is open */

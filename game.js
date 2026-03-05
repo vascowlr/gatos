@@ -38,6 +38,7 @@ assets.boss = new Image();
 assets.boss.src = 'assets/mafia_cat.png'; // No boss icon yet, using mafia for now
 
 // UI Elements
+const uiOverlay = document.getElementById('ui-overlay');
 const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const victoryScreen = document.getElementById('victory-screen');
@@ -452,6 +453,7 @@ function nextLevel() {
 }
 
 function hideScreens() {
+    uiOverlay.classList.remove('active');
     startScreen.classList.remove('active');
     gameOverScreen.classList.remove('active');
     victoryScreen.classList.remove('active');
@@ -500,17 +502,22 @@ function updateHUD() {
 function gameOver() {
     gameState = 'GAMEOVER';
     hideScreens();
+    uiOverlay.classList.add('active');
     gameOverScreen.classList.add('active');
 }
 
 function showVictory() {
     gameState = 'VICTORY';
     hideScreens();
+    uiOverlay.classList.add('active');
     victoryScreen.classList.add('active');
 }
 
 function gameLoop() {
-    if (gameState !== 'PLAYING') return;
+    if (gameState !== 'PLAYING') {
+        animationId = null;
+        return;
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -588,4 +595,5 @@ replayBtn.addEventListener('click', init);
 
 // Initial State
 resize();
+uiOverlay.classList.add('active');
 startScreen.classList.add('active');
