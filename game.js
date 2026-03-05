@@ -44,20 +44,49 @@ function processImage(img, callback) {
 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
+        const w = canvas.width;
+        const h = canvas.height;
 
-        // Filtro agressivo para o xadrez fake e fundos pretos
-        for (let i = 0; i < data.length; i += 4) {
-            const r = data[i], g = data[i + 1], b = data[i + 2];
+        // Utilizamos um Flood Fill a partir das bordas para não apagar o interior dos gatos
+        const visited = new Uint8Array(w * h);
+        const stack = [];
 
-            // Branco/Cinza (xadrez)
+        // Adiciona as bordas iniciais na pilha
+        for (let x = 0; x < w; x++) {
+            stack.push([x, 0]);
+            stack.push([x, h - 1]);
+        }
+        for (let y = 0; y < h; y++) {
+            stack.push([0, y]);
+            stack.push([w - 1, y]);
+        }
+
+        while (stack.length > 0) {
+            const [cx, cy] = stack.pop();
+            if (cx < 0 || cx >= w || cy < 0 || cy >= h) continue;
+
+            const idx = cy * w + cx;
+            if (visited[idx]) continue;
+
+            const pIdx = idx * 4;
+            const r = data[pIdx];
+            const g = data[pIdx + 1];
+            const b = data[pIdx + 2];
+
+            // É quase branco, parecido com o fundo png falso (xadrez leve), ou quase preto puro (fundo falso escuro)
             const isWhiteOrGray = (r > 200 && g > 200 && b > 200) ||
-                (Math.abs(r - 192) < 35 && Math.abs(g - 192) < 35 && Math.abs(b - 192) < 35);
-
-            // Preto (para a nova imagem do gato)
-            const isBlack = r < 50 && g < 50 && b < 50;
+                (Math.abs(r - 192) < 40 && Math.abs(g - 192) < 40 && Math.abs(b - 192) < 40);
+            const isBlack = (r < 30 && g < 30 && b < 30);
 
             if (isWhiteOrGray || isBlack) {
-                data[i + 3] = 0; // Fica transparente
+                visited[idx] = 1;
+                data[pIdx + 3] = 0; // Transparente
+
+                // Propaga pros vizinhos
+                stack.push([cx + 1, cy]);
+                stack.push([cx - 1, cy]);
+                stack.push([cx, cy + 1]);
+                stack.push([cx, cy - 1]);
             }
         }
 
@@ -132,16 +161,20 @@ class Player {
         this.reset();
     }
 
-    reset() {
+    reset(isLevelTransition = false) {
         this.x = 100;
         this.y = canvas.height * GROUND_Y_RATIO - this.height;
         this.vx = 0;
         this.vy = 0;
         this.facing = 1;
         this.onGround = false;
-        // Permite usar logo de cara
-        this.lastHeavyAttackTime = Date.now() - heavyAttackCooldown;
-        health = MAX_HEALTH;
+
+        if (!isLevelTransition) {
+            // Permite usar logo de cara apenas se for início de jogo, não reinicia cooldown ao avançar de fase
+            this.lastHeavyAttackTime = Date.now() - heavyAttackCooldown;
+            health = MAX_HEALTH;
+        }
+
         hairballs = 15;
         updateHUD();
     }
@@ -548,13 +581,13 @@ function init() {
     startLevel(1);
 }
 
-function startLevel(lvl) {
+function startLevel(lvl, isTransition = false) {
     resize();
     hideScreens();
     currentLevel = lvl;
     levelConfig = generateLevelConfig(lvl);
 
-    player.reset();
+    player.reset(isTransition);
     createEnemies();
     platforms = levelConfig.platforms;
     projectiles = [];
@@ -577,13 +610,17 @@ function nextLevel() {
         // Bônus: Dano aumentado e cooldown menor (mínimo de 5s)
         heavyAttackCooldown = Math.max(5000, heavyAttackCooldown - 3000);
 
-        // Mostra uma animação visual do heal/buff (recupera até limite de vida + 50)
-        health = Math.min(MAX_HEALTH, health + 50);
-        updateHUD();
+        // Derrotou Chefe: Recupera a vida INTEIRA
+        health = MAX_HEALTH;
+    } else {
+        // Passou de fase comum: Recupera 25 pontos de vida
+        health = Math.min(MAX_HEALTH, health + 25);
     }
 
+    updateHUD();
+
     if (currentLevel < MAX_LEVELS) {
-        startLevel(currentLevel + 1);
+        startLevel(currentLevel + 1, true);
     } else {
         showVictory();
     }
