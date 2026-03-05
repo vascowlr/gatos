@@ -15,7 +15,7 @@ const HAIRBALL_SPEED = 12;
 const MAX_HEALTH = 100;
 const LEVEL_WIDTH = 3500; // Será definido dinamicamente por fase
 let currentLevel = 1;
-const MAX_LEVELS = 5;
+const MAX_LEVELS = 25;
 
 // Game State
 let gameState = 'START';
@@ -23,6 +23,8 @@ let health = MAX_HEALTH;
 let hairballs = 15;
 let cameraX = 0;
 let animationId;
+let playerDamageBonus = 0;
+let heavyAttackCooldown = 20000;
 
 // Asset Loading
 const assets = {
@@ -138,7 +140,7 @@ class Player {
         this.facing = 1;
         this.onGround = false;
         // Permite usar logo de cara
-        this.lastHeavyAttackTime = Date.now() - 20000;
+        this.lastHeavyAttackTime = Date.now() - heavyAttackCooldown;
         health = MAX_HEALTH;
         hairballs = 15;
         updateHUD();
@@ -219,8 +221,7 @@ class Player {
 
     heavyAttack() {
         const now = Date.now();
-        // Cooldown de 20 segundos
-        if (now - this.lastHeavyAttackTime > 20000) {
+        if (now - this.lastHeavyAttackTime > heavyAttackCooldown) {
             projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, this.facing, true));
             this.lastHeavyAttackTime = now;
         }
@@ -247,13 +248,21 @@ class Player {
 
 class Enemy {
     constructor(x, type = 'normal') {
+        const diff = levelConfig.difficulty || 1;
         this.type = type;
         this.width = type === 'fast' ? 75 : 110;
         this.height = type === 'fast' ? 75 : 110;
         this.x = x;
         this.y = canvas.height * GROUND_Y_RATIO - this.height;
-        this.speed = type === 'fast' ? ENEMY_SPEED * 2.2 + Math.random() : ENEMY_SPEED + Math.random() * 1.5;
-        this.health = type === 'fast' ? 1 : 2;
+
+        // Escala velocidade de acordo com dificuldade
+        let baseSpeed = type === 'fast' ? ENEMY_SPEED * 2.2 + Math.random() : ENEMY_SPEED + Math.random() * 1.5;
+        this.speed = baseSpeed * (1 + (diff - 1) * 0.2);
+
+        // Escala vida de acordo com dificuldade
+        let baseHealth = type === 'fast' ? 1 : 2;
+        this.health = Math.floor(baseHealth * diff);
+
         this.vx = -this.speed;
         this.vy = 0;
         this.onGround = false;
@@ -359,8 +368,15 @@ class Projectile {
         this.y = y;
         this.isHeavy = isHeavy;
         this.radius = isHeavy ? 28 : 12;
-        this.damage = isHeavy ? 4 : 1;
-        this.vx = dir * (isHeavy ? HAIRBALL_SPEED * 1.3 : HAIRBALL_SPEED);
+
+        // Dano escala com o bônus do jogador
+        let baseDamage = isHeavy ? 4 : 1;
+        this.damage = baseDamage + (playerDamageBonus * (isHeavy ? 2 : 1));
+
+        // Velocidade baseada no poder do jogador
+        let baseSpeed = isHeavy ? HAIRBALL_SPEED * 1.3 : HAIRBALL_SPEED;
+        this.vx = dir * baseSpeed * (1 + playerDamageBonus * 0.1);
+
         this.hitEntities = new Set();
     }
 
@@ -419,13 +435,17 @@ class Platform {
 
 class Boss {
     constructor() {
+        const diff = levelConfig.difficulty || 1;
         this.width = 250;
         this.height = 250;
-        this.x = 2800;
+        this.x = Math.max(2800, levelConfig.width - 700);
         this.y = canvas.height * GROUND_Y_RATIO - this.height;
-        this.health = 20;
-        this.maxHealth = 20;
-        this.vx = -4;
+
+        // Vida e velocidade escalam de acordo com as fases superadas
+        this.maxHealth = Math.floor(20 * diff * 1.5);
+        this.health = this.maxHealth;
+        this.vx = -4 * (1 + (diff - 1) * 0.2);
+
         this.state = 'PATROL';
         this.lastAttack = 0;
         this.isDead = false;
@@ -482,78 +502,37 @@ class Boss {
     }
 }
 
-// Level Configs
-const levelConfigs = [
-    {
-        width: 3000,
-        enemyCount: 6,
-        platforms: [
-            new Platform(800, 450, 200, 20),
-            new Platform(1200, 350, 250, 20),
-            new Platform(1600, 450, 200, 20),
-            new Platform(2200, 300, 300, 20)
-        ],
-        hasBoss: false
-    },
-    {
-        width: 4000,
-        enemyCount: 10,
-        platforms: [
-            new Platform(600, 500, 150, 20),
-            new Platform(900, 400, 150, 20),
-            new Platform(1200, 300, 150, 20),
-            new Platform(1600, 450, 200, 20),
-            new Platform(2000, 350, 200, 20),
-            new Platform(2400, 250, 200, 20),
-            new Platform(2800, 400, 200, 20)
-        ],
-        hasBoss: false
-    },
-    {
-        width: 4500,
-        enemyCount: 14,
-        platforms: [
-            new Platform(700, 450, 200, 20),
-            new Platform(1100, 350, 150, 20),
-            new Platform(1400, 250, 150, 20),
-            new Platform(1900, 400, 250, 20),
-            new Platform(2400, 300, 200, 20),
-            new Platform(2900, 200, 150, 20),
-            new Platform(3400, 350, 300, 20)
-        ],
-        hasBoss: false
-    },
-    {
-        width: 5000,
-        enemyCount: 18,
-        platforms: [
-            new Platform(500, 500, 150, 20),
-            new Platform(900, 400, 150, 20),
-            new Platform(1300, 300, 150, 20),
-            new Platform(1700, 200, 150, 20),
-            new Platform(2200, 450, 250, 20),
-            new Platform(2800, 350, 200, 20),
-            new Platform(3300, 250, 200, 20),
-            new Platform(3800, 400, 300, 20),
-            new Platform(4300, 300, 250, 20)
-        ],
-        hasBoss: false
-    },
-    {
-        width: 3500,
-        enemyCount: 4,
-        platforms: [
-            new Platform(500, 450, 300, 20),
-            new Platform(1000, 350, 300, 20),
-            new Platform(1500, 450, 300, 20),
-            new Platform(2000, 300, 400, 20)
-        ],
-        hasBoss: true
-    }
-];
+// Geração procedural de fases
+function generateLevelConfig(lvl) {
+    const isBoss = lvl % 5 === 0;
+    // Multiplicador de status que sobe a cada grupo de 5 fases
+    const difficultyMultiplier = 1 + Math.floor((lvl - 1) / 5) * 0.6;
 
-// Collections
-let levelConfig = levelConfigs[0];
+    // Extensão do nível e quantidade de inimigos baseados na fase atual
+    const width = isBoss ? 3500 : 3000 + (lvl * 300);
+    const enemyCount = isBoss ? 4 : Math.floor(6 + lvl * 1.5 * difficultyMultiplier);
+
+    // Gerar plataformas dinamicamente parecidas com as originais
+    const platforms = [];
+    const numPlatforms = isBoss ? 4 : 4 + Math.floor(lvl / 2);
+
+    for (let i = 0; i < numPlatforms; i++) {
+        let px = 600 + i * ((width - 1000) / numPlatforms) + (Math.random() * 200 - 100);
+        let py = 250 + Math.random() * 200;
+        let pw = 150 + Math.random() * 100;
+        platforms.push(new Platform(px, py, pw, 20));
+    }
+
+    return {
+        width,
+        enemyCount,
+        platforms,
+        hasBoss: isBoss,
+        difficulty: difficultyMultiplier
+    };
+}
+
+let levelConfig = null;
 let player = new Player();
 let enemies = [];
 let projectiles = [];
@@ -562,6 +541,9 @@ let boss = null;
 
 function init() {
     currentLevel = 1;
+    playerDamageBonus = 0;
+    heavyAttackCooldown = 20000;
+    levelConfig = generateLevelConfig(1);
     startLevel(1);
 }
 
@@ -569,7 +551,7 @@ function startLevel(lvl) {
     resize();
     hideScreens();
     currentLevel = lvl;
-    levelConfig = levelConfigs[lvl - 1];
+    levelConfig = generateLevelConfig(lvl);
 
     player.reset();
     createEnemies();
@@ -588,6 +570,17 @@ function startLevel(lvl) {
 }
 
 function nextLevel() {
+    if (levelConfig.hasBoss) {
+        // Derrotou chefe: Fica mais forte!
+        playerDamageBonus += 1;
+        // Bônus: Dano aumentado e cooldown menor (mínimo de 5s)
+        heavyAttackCooldown = Math.max(5000, heavyAttackCooldown - 3000);
+
+        // Mostra uma animação visual do heal/buff (recupera até limite de vida + 50)
+        health = Math.min(MAX_HEALTH, health + 50);
+        updateHUD();
+    }
+
     if (currentLevel < MAX_LEVELS) {
         startLevel(currentLevel + 1);
     } else {
@@ -743,7 +736,7 @@ function gameLoop() {
 
     // Cooldown UI Update
     const now = Date.now();
-    const cdLeft = Math.max(0, 20000 - (now - player.lastHeavyAttackTime));
+    const cdLeft = Math.max(0, heavyAttackCooldown - (now - player.lastHeavyAttackTime));
     const heavyUI = document.getElementById('heavy-cooldown');
     if (heavyUI) {
         if (cdLeft === 0) {
