@@ -28,14 +28,54 @@ let animationId;
 const assets = {
     hero: new Image(),
     enemy: new Image(),
-    background: new Image()
+    background: new Image(),
+    boss: new Image()
 };
 
+function processImage(img, callback) {
+    img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Filtro agressivo para o xadrez fake e fundos pretos
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i + 1], b = data[i + 2];
+
+            // Branco/Cinza (xadrez)
+            const isWhiteOrGray = (r > 200 && g > 200 && b > 200) ||
+                (Math.abs(r - 192) < 35 && Math.abs(g - 192) < 35 && Math.abs(b - 192) < 35);
+
+            // Preto (para a nova imagem do gato)
+            const isBlack = r < 50 && g < 50 && b < 50;
+
+            if (isWhiteOrGray || isBlack) {
+                data[i + 3] = 0; // Fica transparente
+            }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        const newImg = new Image();
+        newImg.src = canvas.toDataURL();
+        newImg.onload = () => callback(newImg);
+    };
+}
+
 assets.hero.src = 'assets/hero_cat.png';
+processImage(assets.hero, (img) => { assets.hero = img; });
+
 assets.enemy.src = 'assets/mafia_cat.png';
+processImage(assets.enemy, (img) => {
+    assets.enemy = img;
+    assets.boss = img;
+});
+
 assets.background.src = 'assets/background.png';
-assets.boss = new Image();
-assets.boss.src = 'assets/mafia_cat.png'; // No boss icon yet, using mafia for now
 
 // UI Elements
 const uiOverlay = document.getElementById('ui-overlay');
@@ -164,11 +204,9 @@ class Player {
 
     attack() {
         const now = Date.now();
-        if (hairballs > 0 && now - this.lastAttackTime > 350) {
+        if (now - this.lastAttackTime > 350) {
             projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, this.facing));
-            hairballs--;
             this.lastAttackTime = now;
-            updateHUD();
         }
     }
 
@@ -200,15 +238,61 @@ class Enemy {
         this.speed = ENEMY_SPEED + Math.random() * 1.5;
         this.health = 2;
         this.vx = -this.speed;
+        this.vy = 0;
+        this.onGround = false;
         this.spawnX = x;
+        this.jumpCooldown = 0;
     }
 
     update() {
         this.x += this.vx;
 
-        // Grounded Y
+        // Gravity
+        this.vy += GRAVITY;
+        this.y += this.vy;
+
+        // Platform & Ground Collision
         const groundY = canvas.height * GROUND_Y_RATIO - this.height;
-        this.y = groundY;
+        this.onGround = false;
+
+        // Check Platforms
+        for (let p of platforms) {
+            if (this.vy >= 0 &&
+                this.x + this.width * 0.3 < p.x + p.w &&
+                this.x + this.width * 0.7 > p.x &&
+                this.y + this.height >= p.y &&
+                this.y + this.height <= p.y + p.h + this.vy) {
+                this.y = p.y - this.height;
+                this.vy = 0;
+                this.onGround = true;
+                break;
+            }
+        }
+
+        // Ground Collision
+        if (this.y > groundY) {
+            this.y = groundY;
+            this.vy = 0;
+            this.onGround = true;
+        }
+
+        // Jump AI: Jump if hitting player height difference or randomly to climb
+        if (this.onGround && this.jumpCooldown <= 0) {
+            // Se o player estiver acima e próximo horizontalmente
+            const distToPlayer = Math.abs(this.x - player.x);
+            if (player.y < this.y - 50 && distToPlayer < 200) {
+                this.vy = JUMP_FORCE * 1.1; // Jump a bit higher
+                this.onGround = false;
+                this.jumpCooldown = 100; // frames
+            }
+            // Ou pular aleatoriamente se estiver perto de uma plataforma
+            else if (Math.random() < 0.01) {
+                this.vy = JUMP_FORCE;
+                this.onGround = false;
+                this.jumpCooldown = 60;
+            }
+        }
+        if (this.jumpCooldown > 0) this.jumpCooldown--;
 
         // Patrol logic
         if (this.x < this.spawnX - 300) {
@@ -220,7 +304,7 @@ class Enemy {
             this.x = this.spawnX + 300;
         }
 
-        // Stay within level boundaries and handle walls better
+        // Stay within level boundaries
         if (this.x < 0) {
             this.x = 0;
             this.vx = Math.abs(this.vx);
@@ -410,12 +494,12 @@ const levelConfigs = [
 ];
 
 // Collections
+let levelConfig = levelConfigs[0];
 let player = new Player();
 let enemies = [];
 let projectiles = [];
 let platforms = [];
 let boss = null;
-let levelConfig = levelConfigs[0];
 
 function init() {
     currentLevel = 1;
@@ -492,7 +576,7 @@ function takeDamage(amt) {
 
 function updateHUD() {
     healthBar.style.width = `${health}%`;
-    hairballCount.innerText = hairballs;
+    hairballCount.innerText = '∞';
     const levelDisplay = document.getElementById('level-display');
     if (levelDisplay) {
         levelDisplay.innerText = `Level ${currentLevel}${levelConfig.hasBoss ? ' (BOSS)' : ''}`;
@@ -554,7 +638,6 @@ function gameLoop() {
                 projectiles.splice(i, 1);
                 if (e.health <= 0) {
                     enemies.splice(j, 1);
-                    hairballs += 2;
                     updateHUD();
                 }
                 break;
@@ -568,7 +651,6 @@ function gameLoop() {
                 projectiles.splice(i, 1);
                 if (boss.health <= 0) {
                     boss.isDead = true;
-                    hairballs += 10;
                     updateHUD();
                 }
             }
