@@ -15,7 +15,7 @@ const HAIRBALL_SPEED = 12;
 const MAX_HEALTH = 100;
 const LEVEL_WIDTH = 3500; // Será definido dinamicamente por fase
 let currentLevel = 1;
-const MAX_LEVELS = 3;
+const MAX_LEVELS = 5;
 
 // Game State
 let gameState = 'START';
@@ -91,7 +91,7 @@ const hairballCount = document.getElementById('hairball-count');
 // Input Handling
 const keys = {
     w: false, a: false, s: false, d: false,
-    space: false, e: false
+    space: false, e: false, f: false
 };
 
 window.addEventListener('keydown', (e) => {
@@ -101,9 +101,11 @@ window.addEventListener('keydown', (e) => {
     else if (key === 'd' || key === 'arrowright') keys.d = true;
     else if (key === 's' || key === 'arrowdown') keys.s = true;
     else if (key === 'e') keys.e = true;
+    else if (key === 'f') keys.f = true;
 
-    if ((key === 'e') && gameState === 'PLAYING') {
-        player.attack();
+    if (gameState === 'PLAYING') {
+        if (key === 'e') player.attack();
+        if (key === 'f') player.heavyAttack();
     }
 });
 
@@ -114,15 +116,18 @@ window.addEventListener('keyup', (e) => {
     else if (key === 'd' || key === 'arrowright') keys.d = false;
     else if (key === 's' || key === 'arrowdown') keys.s = false;
     else if (key === 'e') keys.e = false;
+    else if (key === 'f') keys.f = false;
 });
+
 
 // Classes
 class Player {
     constructor() {
         this.width = 120;
         this.height = 120;
-        this.reset();
         this.lastAttackTime = 0;
+        this.lastHeavyAttackTime = 0;
+        this.reset();
     }
 
     reset() {
@@ -132,6 +137,8 @@ class Player {
         this.vy = 0;
         this.facing = 1;
         this.onGround = false;
+        // Permite usar logo de cara
+        this.lastHeavyAttackTime = Date.now() - 20000;
         health = MAX_HEALTH;
         hairballs = 15;
         updateHUD();
@@ -210,6 +217,15 @@ class Player {
         }
     }
 
+    heavyAttack() {
+        const now = Date.now();
+        // Cooldown de 20 segundos
+        if (now - this.lastHeavyAttackTime > 20000) {
+            projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, this.facing, true));
+            this.lastHeavyAttackTime = now;
+        }
+    }
+
     render() {
         ctx.save();
         ctx.translate(-cameraX, 0);
@@ -230,13 +246,14 @@ class Player {
 }
 
 class Enemy {
-    constructor(x) {
-        this.width = 110;
-        this.height = 110;
+    constructor(x, type = 'normal') {
+        this.type = type;
+        this.width = type === 'fast' ? 75 : 110;
+        this.height = type === 'fast' ? 75 : 110;
         this.x = x;
         this.y = canvas.height * GROUND_Y_RATIO - this.height;
-        this.speed = ENEMY_SPEED + Math.random() * 1.5;
-        this.health = 2;
+        this.speed = type === 'fast' ? ENEMY_SPEED * 2.2 + Math.random() : ENEMY_SPEED + Math.random() * 1.5;
+        this.health = type === 'fast' ? 1 : 2;
         this.vx = -this.speed;
         this.vy = 0;
         this.onGround = false;
@@ -324,7 +341,7 @@ class Enemy {
         ctx.save();
         ctx.translate(-cameraX, 0);
         ctx.shadowBlur = 20;
-        ctx.shadowColor = 'rgba(255, 0, 85, 0.4)';
+        ctx.shadowColor = this.type === 'fast' ? 'rgba(0, 200, 255, 0.7)' : 'rgba(255, 0, 85, 0.4)';
         if (this.vx > 0) {
             ctx.translate(this.x + this.width, this.y);
             ctx.scale(-1, 1);
@@ -337,11 +354,14 @@ class Enemy {
 }
 
 class Projectile {
-    constructor(x, y, dir) {
+    constructor(x, y, dir, isHeavy = false) {
         this.x = x;
         this.y = y;
-        this.radius = 12;
-        this.vx = dir * HAIRBALL_SPEED;
+        this.isHeavy = isHeavy;
+        this.radius = isHeavy ? 28 : 12;
+        this.damage = isHeavy ? 4 : 1;
+        this.vx = dir * (isHeavy ? HAIRBALL_SPEED * 1.3 : HAIRBALL_SPEED);
+        this.hitEntities = new Set();
     }
 
     update() {
@@ -353,9 +373,17 @@ class Projectile {
         ctx.translate(-cameraX, 0);
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff';
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#fff';
+
+        if (this.isHeavy) {
+            ctx.fillStyle = '#ff9900';
+            ctx.shadowColor = '#ff5500';
+            ctx.shadowBlur = 25;
+        } else {
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#fff';
+        }
+
         ctx.fill();
         ctx.restore();
     }
@@ -415,8 +443,9 @@ class Boss {
         // Boss Attack (fires mafia cats or something?)
         const now = Date.now();
         if (now - this.lastAttack > 2000) {
-            // Spawn an enemy
-            enemies.push(new Enemy(this.x));
+            // Spawn an enemy (chance to be fast)
+            const type = Math.random() > 0.4 ? 'fast' : 'normal';
+            enemies.push(new Enemy(this.x, type));
             this.lastAttack = now;
         }
 
@@ -477,6 +506,36 @@ const levelConfigs = [
             new Platform(2000, 350, 200, 20),
             new Platform(2400, 250, 200, 20),
             new Platform(2800, 400, 200, 20)
+        ],
+        hasBoss: false
+    },
+    {
+        width: 4500,
+        enemyCount: 14,
+        platforms: [
+            new Platform(700, 450, 200, 20),
+            new Platform(1100, 350, 150, 20),
+            new Platform(1400, 250, 150, 20),
+            new Platform(1900, 400, 250, 20),
+            new Platform(2400, 300, 200, 20),
+            new Platform(2900, 200, 150, 20),
+            new Platform(3400, 350, 300, 20)
+        ],
+        hasBoss: false
+    },
+    {
+        width: 5000,
+        enemyCount: 18,
+        platforms: [
+            new Platform(500, 500, 150, 20),
+            new Platform(900, 400, 150, 20),
+            new Platform(1300, 300, 150, 20),
+            new Platform(1700, 200, 150, 20),
+            new Platform(2200, 450, 250, 20),
+            new Platform(2800, 350, 200, 20),
+            new Platform(3300, 250, 200, 20),
+            new Platform(3800, 400, 300, 20),
+            new Platform(4300, 300, 250, 20)
         ],
         hasBoss: false
     },
@@ -547,7 +606,9 @@ function createEnemies() {
     enemies = [];
     const count = levelConfig.enemyCount;
     for (let i = 0; i < count; i++) {
-        enemies.push(new Enemy(800 + i * (levelConfig.width / (count + 1)) + Math.random() * 200));
+        // 60% chance of being a fast enemy
+        const type = Math.random() > 0.4 ? 'fast' : 'normal';
+        enemies.push(new Enemy(800 + i * (levelConfig.width / (count + 1)) + Math.random() * 200, type));
     }
 }
 
@@ -634,24 +695,38 @@ function gameLoop() {
         for (let j = enemies.length - 1; j >= 0; j--) {
             const e = enemies[j];
             if (p.x > e.x && p.x < e.x + e.width && p.y > e.y && p.y < e.y + e.height) {
-                e.health--;
-                projectiles.splice(i, 1);
-                if (e.health <= 0) {
-                    enemies.splice(j, 1);
-                    updateHUD();
+                if (!p.hitEntities.has(e)) {
+                    e.health -= p.damage;
+                    p.hitEntities.add(e);
+
+                    if (e.health <= 0) {
+                        enemies.splice(j, 1);
+                        updateHUD();
+                    }
+
+                    if (!p.isHeavy) {
+                        projectiles.splice(i, 1);
+                        break;
+                    }
                 }
-                break;
             }
         }
 
         // Check boss
         if (boss && !boss.isDead && projectiles[i]) {
             if (p.x > boss.x && p.x < boss.x + boss.width && p.y > boss.y && p.y < boss.y + boss.height) {
-                boss.health--;
-                projectiles.splice(i, 1);
-                if (boss.health <= 0) {
-                    boss.isDead = true;
-                    updateHUD();
+                if (!p.hitEntities.has(boss)) {
+                    boss.health -= p.damage;
+                    p.hitEntities.add(boss);
+
+                    if (boss.health <= 0) {
+                        boss.isDead = true;
+                        updateHUD();
+                    }
+
+                    if (!p.isHeavy) {
+                        projectiles.splice(i, 1);
+                    }
                 }
             }
         }
@@ -664,6 +739,22 @@ function gameLoop() {
     for (let e of enemies) {
         e.update();
         e.render();
+    }
+
+    // Cooldown UI Update
+    const now = Date.now();
+    const cdLeft = Math.max(0, 20000 - (now - player.lastHeavyAttackTime));
+    const heavyUI = document.getElementById('heavy-cooldown');
+    if (heavyUI) {
+        if (cdLeft === 0) {
+            heavyUI.innerText = 'Pronto (F)';
+            heavyUI.style.color = '#fff';
+            heavyUI.style.fontWeight = 'bold';
+        } else {
+            heavyUI.innerText = `(${(cdLeft / 1000).toFixed(1)}s)`;
+            heavyUI.style.color = '#777';
+            heavyUI.style.fontWeight = 'normal';
+        }
     }
 
     animationId = requestAnimationFrame(gameLoop);
