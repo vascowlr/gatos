@@ -1,9 +1,9 @@
-# 🐱 Stray Love: O Fugitivo
+# 🐱 Cat Against the Mafia
 
-Um jogo de aventura singleplayer desenvolvido para web, onde o amor desafia a máfia felina.
+Um jogo de aventura singleplayer desenvolvido para web, onde um gato luta contra a máfia.
 
 ## 📖 Sobre o Projeto
-Neste jogo, você assume o papel de um gato doméstico corajoso que decide abandonar o conforto do lar por um motivo nobre: encontrar sua amada. No entanto, o caminho não será fácil. As ruas são controladas por uma perigosa Máfia de Gatos que fará de tudo para impedir sua jornada.
+Neste jogo, você assume o papel de um gato doméstico corajoso que decide abandonar o conforto do lar por um motivo nobre: pegar o atum do vizinho. No entanto, o caminho não será fácil. As ruas são controladas por uma perigosa Máfia de Gatos que fará de tudo para impedir sua jornada.
 
 Este projeto foi desenvolvido utilizando o motor **Antigravity** e está preparado para hospedagem via GitHub Pages.
 
@@ -13,7 +13,7 @@ O objetivo é atravessar os cenários desviando de obstáculos e derrotando os c
 ### Comandos
 | Tecla | Ação |
 | :--- | :--- |
-| **W, A, S, D / Setas** | Movimentação do personagem |
+| **W, A, D / Setas** | Movimentação do personagem |
 | **Espaço / W / Seta Cima** | Pular obstáculos |
 | **E** | Atacar (Lança Bolas de Pelo) |
 
@@ -40,4 +40,4 @@ Este projeto utiliza o GitHub Pages para disponibilizar o jogo online de forma g
 - **Desenvolvido por**: Antigravity
 
 ---
-*Em busca do amor em um mundo dominado pela máfia.*
+*Por algum motivo do além, a máfia está atrás de você. Fuja!*
