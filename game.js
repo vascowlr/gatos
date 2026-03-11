@@ -25,6 +25,7 @@ let cameraX = 0;
 let animationId;
 let playerDamageBonus = 0;
 let heavyAttackCooldown = 20000;
+let lastDamageTime = 0;
 
 // Asset Loading
 const assets = {
@@ -247,6 +248,11 @@ class Player {
     }
 
     render() {
+        // Pisca (fica invisível rapidamente) se tomou dano recentemente (i-frames)
+        if (Date.now() - lastDamageTime < 1000) {
+            if (Math.floor(Date.now() / 100) % 2 === 0) return;
+        }
+
         ctx.save();
         ctx.translate(-cameraX, 0);
 
@@ -361,7 +367,7 @@ class Enemy {
 
         // Player collision
         if (checkCollision(this, player)) {
-            takeDamage(0.5);
+            takeDamage(10);
         }
     }
 
@@ -468,7 +474,7 @@ class Boss {
         this.vx = -this.speed;
 
         // Dano inicial reduzido novamente para ser mais baixo no começo
-        this.damage = 0.2 + (0.2 * diff);
+        this.damage = 10 + (5 * diff);
 
         this.state = 'PATROL';
         this.lastAttack = 0;
@@ -542,7 +548,9 @@ function generateLevelConfig(lvl) {
 
     for (let i = 0; i < numPlatforms; i++) {
         let px = 600 + i * ((width - 1000) / numPlatforms) + (Math.random() * 200 - 100);
-        let py = 250 + Math.random() * 200;
+        // Plataformas ficam numa altura alcançável com base no chão (120 a 220 pixels acima do chão)
+        const groundY = canvas.height * GROUND_Y_RATIO;
+        let py = groundY - (120 + Math.random() * 100);
         let pw = 150 + Math.random() * 100;
         platforms.push(new Platform(px, py, pw, 20));
     }
@@ -648,6 +656,10 @@ function checkCollision(obj1, obj2) {
 }
 
 function takeDamage(amt) {
+    const now = Date.now();
+    if (now - lastDamageTime < 1000) return; // 1 segundo de invencibilidade
+    lastDamageTime = now;
+
     health -= amt;
     if (health <= 0) {
         health = 0;
