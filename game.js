@@ -8,7 +8,7 @@ const ctx = canvas.getContext('2d');
 // Game Constants
 const GRAVITY = 0.5;
 const GROUND_Y_RATIO = 0.85;
-const PLAYER_SPEED = 4;
+const PLAYER_SPEED = 5;
 const JUMP_FORCE = -14;
 const ENEMY_SPEED = 1.5;
 const HAIRBALL_SPEED = 12;
@@ -467,8 +467,8 @@ class Boss {
         this.speed = 2.5 * (1 + (diff - 1) * 0.2);
         this.vx = -this.speed;
 
-        // Dano inicial reduzido (2 -> 1), mas cresce à medida que o jogador avança nas fases
-        this.damage = 0.5 + (0.5 * diff);
+        // Dano inicial reduzido novamente para ser mais baixo no começo
+        this.damage = 0.2 + (0.2 * diff);
 
         this.state = 'PATROL';
         this.lastAttack = 0;
