@@ -8,9 +8,9 @@ const ctx = canvas.getContext('2d');
 // Game Constants
 const GRAVITY = 0.5;
 const GROUND_Y_RATIO = 0.85;
-const PLAYER_SPEED = 6;
+const PLAYER_SPEED = 4;
 const JUMP_FORCE = -14;
-const ENEMY_SPEED = 2.5;
+const ENEMY_SPEED = 1.5;
 const HAIRBALL_SPEED = 12;
 const MAX_HEALTH = 100;
 
@@ -478,7 +478,8 @@ class Boss {
         // Vida e velocidade escalam de acordo com as fases superadas
         this.maxHealth = Math.floor(20 * diff * 1.5);
         this.health = this.maxHealth;
-        this.vx = -4 * (1 + (diff - 1) * 0.2);
+        this.speed = 2.5 * (1 + (diff - 1) * 0.2);
+        this.vx = -this.speed;
 
         this.state = 'PATROL';
         this.lastAttack = 0;
@@ -491,8 +492,8 @@ class Boss {
         this.x += this.vx;
 
         // Boss AI
-        if (this.x < 2000) this.vx = 4;
-        if (this.x > levelConfig.width - this.width) this.vx = -4;
+        if (this.x < 2000) this.vx = this.speed;
+        if (this.x > levelConfig.width - this.width) this.vx = -this.speed;
 
         // Boss Attack (fires mafia cats or something?)
         const now = Date.now();
