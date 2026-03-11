@@ -73,21 +73,7 @@ function processImage(img, callback) {
             const g = data[pIdx + 1];
             const b = data[pIdx + 2];
 
-            // É quase branco, parecido com o fundo png falso (xadrez leve), ou quase preto puro (fundo falso escuro)
-            const isWhiteOrGray = (r > 200 && g > 200 && b > 200) ||
-                (Math.abs(r - 192) < 40 && Math.abs(g - 192) < 40 && Math.abs(b - 192) < 40);
-            const isBlack = (r < 30 && g < 30 && b < 30);
 
-            if (isWhiteOrGray || isBlack) {
-                visited[idx] = 1;
-                data[pIdx + 3] = 0; // Transparente
-
-                // Propaga pros vizinhos
-                stack.push([cx + 1, cy]);
-                stack.push([cx - 1, cy]);
-                stack.push([cx, cy + 1]);
-                stack.push([cx, cy - 1]);
-            }
         }
 
         ctx.putImageData(imageData, 0, 0);
@@ -481,6 +467,9 @@ class Boss {
         this.speed = 2.5 * (1 + (diff - 1) * 0.2);
         this.vx = -this.speed;
 
+        // Dano inicial reduzido (2 -> 1), mas cresce à medida que o jogador avança nas fases
+        this.damage = 0.5 + (0.5 * diff);
+
         this.state = 'PATROL';
         this.lastAttack = 0;
         this.isDead = false;
@@ -505,7 +494,7 @@ class Boss {
         }
 
         if (checkCollision(this, player)) {
-            takeDamage(2);
+            takeDamage(this.damage);
         }
     }
 
