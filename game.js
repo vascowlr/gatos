@@ -8,9 +8,13 @@ const ctx = canvas.getContext('2d');
 // Game Constants
 const GRAVITY = 0.5;
 const GROUND_Y_RATIO = 0.85;
+<<<<<<< HEAD
 const PLAYER_SPEED = 7.5; // Aumentado para 7.5 para superar a velocidade dos inimigos
+=======
+const PLAYER_SPEED = 5;
+>>>>>>> 4f04f6f4c26cf86613f2b32df65bc8c2b0f319c2
 const JUMP_FORCE = -14;
-const ENEMY_SPEED = 2.5;
+const ENEMY_SPEED = 1.5;
 const HAIRBALL_SPEED = 12;
 const MAX_HEALTH = 100;
 
@@ -25,6 +29,7 @@ let cameraX = 0;
 let animationId;
 let playerDamageBonus = 0;
 let heavyAttackCooldown = 20000;
+let lastDamageTime = 0;
 
 // Asset Loading
 const assets = {
@@ -73,21 +78,7 @@ function processImage(img, callback) {
             const g = data[pIdx + 1];
             const b = data[pIdx + 2];
 
-            // É quase branco, parecido com o fundo png falso (xadrez leve), ou quase preto puro (fundo falso escuro)
-            const isWhiteOrGray = (r > 200 && g > 200 && b > 200) ||
-                (Math.abs(r - 192) < 40 && Math.abs(g - 192) < 40 && Math.abs(b - 192) < 40);
-            const isBlack = (r < 30 && g < 30 && b < 30);
 
-            if (isWhiteOrGray || isBlack) {
-                visited[idx] = 1;
-                data[pIdx + 3] = 0; // Transparente
-
-                // Propaga pros vizinhos
-                stack.push([cx + 1, cy]);
-                stack.push([cx - 1, cy]);
-                stack.push([cx, cy + 1]);
-                stack.push([cx, cy - 1]);
-            }
         }
 
         ctx.putImageData(imageData, 0, 0);
@@ -265,6 +256,11 @@ class Player {
     }
 
     render() {
+        // Pisca (fica invisível rapidamente) se tomou dano recentemente (i-frames)
+        if (Date.now() - lastDamageTime < 1000) {
+            if (Math.floor(Date.now() / 100) % 2 === 0) return;
+        }
+
         ctx.save();
         ctx.translate(-cameraX, 0);
 
@@ -379,7 +375,7 @@ class Enemy {
 
         // Player collision
         if (checkCollision(this, player)) {
-            takeDamage(0.5);
+            takeDamage(10);
         }
     }
 
@@ -482,7 +478,11 @@ class Boss {
         // Vida e velocidade escalam de acordo com as fases superadas
         this.maxHealth = Math.floor(20 * diff * 1.5);
         this.health = this.maxHealth;
-        this.vx = -4 * (1 + (diff - 1) * 0.2);
+        this.speed = 2.5 * (1 + (diff - 1) * 0.2);
+        this.vx = -this.speed;
+
+        // Dano inicial reduzido novamente para ser mais baixo no começo
+        this.damage = 10 + (5 * diff);
 
         this.state = 'PATROL';
         this.lastAttack = 0;
@@ -495,8 +495,8 @@ class Boss {
         this.x += this.vx;
 
         // Boss AI
-        if (this.x < 2000) this.vx = 4;
-        if (this.x > levelConfig.width - this.width) this.vx = -4;
+        if (this.x < 2000) this.vx = this.speed;
+        if (this.x > levelConfig.width - this.width) this.vx = -this.speed;
 
         // Boss Attack (fires mafia cats or something?)
         const now = Date.now();
@@ -508,7 +508,7 @@ class Boss {
         }
 
         if (checkCollision(this, player)) {
-            takeDamage(2);
+            takeDamage(this.damage);
         }
     }
 
@@ -556,7 +556,9 @@ function generateLevelConfig(lvl) {
 
     for (let i = 0; i < numPlatforms; i++) {
         let px = 600 + i * ((width - 1000) / numPlatforms) + (Math.random() * 200 - 100);
-        let py = 250 + Math.random() * 200;
+        // Plataformas ficam numa altura alcançável com base no chão (120 a 220 pixels acima do chão)
+        const groundY = canvas.height * GROUND_Y_RATIO;
+        let py = groundY - (120 + Math.random() * 100);
         let pw = 150 + Math.random() * 100;
         platforms.push(new Platform(px, py, pw, 20));
     }
@@ -662,6 +664,10 @@ function checkCollision(obj1, obj2) {
 }
 
 function takeDamage(amt) {
+    const now = Date.now();
+    if (now - lastDamageTime < 1000) return; // 1 segundo de invencibilidade
+    lastDamageTime = now;
+
     health -= amt;
     if (health <= 0) {
         health = 0;
