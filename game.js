@@ -8,11 +8,7 @@ const ctx = canvas.getContext('2d');
 // Game Constants
 const GRAVITY = 0.5;
 const GROUND_Y_RATIO = 0.85;
-<<<<<<< HEAD
 const PLAYER_SPEED = 7.5; // Aumentado para 7.5 para superar a velocidade dos inimigos
-=======
-const PLAYER_SPEED = 5;
->>>>>>> 4f04f6f4c26cf86613f2b32df65bc8c2b0f319c2
 const JUMP_FORCE = -14;
 const ENEMY_SPEED = 1.5;
 const HAIRBALL_SPEED = 12;
