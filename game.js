@@ -8,7 +8,7 @@ const ctx = canvas.getContext('2d');
 // Game Constants
 const GRAVITY = 0.5;
 const GROUND_Y_RATIO = 0.85;
-const PLAYER_SPEED = 6;
+const PLAYER_SPEED = 7.5; // Aumentado para 7.5 para superar a velocidade dos inimigos
 const JUMP_FORCE = -14;
 const ENEMY_SPEED = 2.5;
 const HAIRBALL_SPEED = 12;
@@ -180,12 +180,16 @@ class Player {
     }
 
     update() {
+        // Velocidade que escala com a dificuldade do nível, garantindo ser maior que os inimigos
+        const diff = levelConfig ? (levelConfig.difficulty || 1) : 1;
+        const currentSpeed = PLAYER_SPEED * (1 + (diff - 1) * 0.2);
+
         // Movement
         if (keys.a) {
-            this.vx = -PLAYER_SPEED;
+            this.vx = -currentSpeed;
             this.facing = -1;
         } else if (keys.d) {
-            this.vx = PLAYER_SPEED;
+            this.vx = currentSpeed;
             this.facing = 1;
         } else {
             this.vx *= 0.85; // Friction
