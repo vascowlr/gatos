@@ -10,7 +10,7 @@ const GRAVITY = 0.5;
 const GROUND_Y_RATIO = 0.85;
 const PLAYER_SPEED = 7.5; // Aumentado para 7.5 para superar a velocidade dos inimigos
 const JUMP_FORCE = -14;
-const ENEMY_SPEED = 1.5;
+const ENEMY_SPEED = 2.5; // Aumentado para deixar inimigos mais rápidos, mas inferior ao player (7.5)
 const HAIRBALL_SPEED = 12;
 const MAX_HEALTH = 100;
 
@@ -474,7 +474,7 @@ class Boss {
         // Vida e velocidade escalam de acordo com as fases superadas
         this.maxHealth = Math.floor(20 * diff * 1.5);
         this.health = this.maxHealth;
-        this.speed = 2.5 * (1 + (diff - 1) * 0.2);
+        this.speed = 4.0 * (1 + (diff - 1) * 0.2); // Aumentado para acompanhar a velocidade dos inimigos
         this.vx = -this.speed;
 
         // Dano inicial reduzido novamente para ser mais baixo no começo
